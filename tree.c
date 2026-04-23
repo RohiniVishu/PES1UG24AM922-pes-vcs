@@ -194,3 +194,11 @@ static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
     }
  void *data;
     size_t len;
+ if (tree_serialize(&tree, &data, &len) != 0)
+        return -1;
+
+    int rc = object_write(OBJ_TREE, data, len, out_id);
+    free(data);
+
+    return rc;
+}
