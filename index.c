@@ -315,18 +315,19 @@ int index_add(Index *index, const char *path) {
     size_t size = (size_t)st.st_size;
     void *data = NULL;
 
-    if (size > 0) {
-        data = malloc(size);
-        if (!data) {
-            fclose(fp);
-            return -1;
-        }
-        if (fread(data, 1, size, fp) != size) {
-            free(data);
-            fclose(fp);
-            return -1;
-        }
+    void *data = malloc(size == 0 ? 1 : size);
+if (!data) {
+    fclose(fp);
+    return -1;
+}
+
+if (size > 0) {
+    if (fread(data, 1, size, fp) != size) {
+        free(data);
+        fclose(fp);
+        return -1;
     }
+}
 
     fclose(fp);
 
