@@ -138,6 +138,21 @@ int index_status(const Index *index) {
 //   - hex_to_hash                      : converting the parsed string to ObjectID
 //
 // Returns 0 on success, -1 on error.
+static int compare_index_entries(const void *a, const void *b) {
+    const IndexEntry *ia = (const IndexEntry *)a;
+    const IndexEntry *ib = (const IndexEntry *)b;
+    return strcmp(ia->path, ib->path);
+}
+
+static int ensure_dir(const char *path) {
+    if (mkdir(path, 0755) == 0) return 0;
+    if (errno == EEXIST) return 0;
+    return -1;
+}
+
+static int write_all(FILE *fp, const char *buf, size_t len) {
+    return fwrite(buf, 1, len, fp) == len ? 0 : -1;
+}
 int index_load(Index *index) {
     // TODO: Implement index loading
     // (See Lab Appendix for logical steps)
