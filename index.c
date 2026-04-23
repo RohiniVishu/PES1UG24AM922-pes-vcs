@@ -226,10 +226,71 @@ int index_load(Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_save(const Index *index) {
-    // TODO: Implement atomic index saving
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+    if (!index) return -1;
+
+    if (ensure_dir(PES_DIR) != 0) return -1;
+
+    Index sorted = *index;
+    qsort(sorted.entries, sorted.count, sizeof(IndexEntry), compare_index_entries);
+
+    char tmp_template[512];
+    snprintf(tmp_template, sizeof(tmp_template), "%s/.indexXXXXXX", PES_DIR);
+
+    int fd = mkstemp(tmp_template);
+    if (fd < 0) return -1;
+
+    FILE *fp = fdopen(fd, "w");
+    if (!fp) {
+        close(fd);
+        unlink(tmp_template);
+        return -1;
+    }
+
+    for (int i = 0; i < sorted.count; i++) {
+        char hash_hex[HASH_HEX_SIZE + 1];
+        hash_to_hex(&sorted.entries[i].hash, hash_hex);
+
+        if (fprintf(fp, "%o %s %llu %u %s\n",
+                    sorted.entries[i].mode,
+                    hash_hex,
+                    (unsigned long long)sorted.entries[i].mtime_sec,
+                    sorted.entries[i].size,
+                    sorted.entries[i].path) < 0) {
+            fclose(fp);
+            unlink(tmp_template);
+            return -1;
+        }
+    }
+
+    if (fflush(fp) != 0) {
+        fclose(fp);
+        unlink(tmp_template);
+        return -1;
+    }
+
+    if (fsync(fileno(fp)) != 0) {
+        fclose(fp);
+        unlink(tmp_template);
+        return -1;
+    }
+
+    if (fclose(fp) != 0) {
+        unlink(tmp_template);
+        return -1;
+    }
+
+    if (rename(tmp_template, INDEX_FILE) != 0) {
+        unlink(tmp_template);
+        return -1;
+    }
+
+    int dirfd = open(PES_DIR, O_RDONLY);
+    if (dirfd >= 0) {
+        fsync(dirfd);
+        close(dirfd);
+    }
+
+    return 0;
 }
 
 // Stage a file for the next commit.
