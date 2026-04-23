@@ -46,7 +46,11 @@ void cmd_add(int argc, char *argv[]) {
         fprintf(stderr, "error: failed to load index\n");
         return;
     }
-
+    Index idx;
+if (index_load(&idx) != 0) {
+    fprintf(stderr, "index load failed\n");
+    return 1;
+}
     for (int i = 2; i < argc; i++) {
         if (index_add(&index, argv[i]) != 0) {
             fprintf(stderr, "error: failed to add '%s'\n", argv[i]);
