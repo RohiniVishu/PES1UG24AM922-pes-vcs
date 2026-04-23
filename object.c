@@ -245,7 +245,116 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
-    // TODO: Implement
-    (void)id; (void)type_out; (void)data_out; (void)len_out;
-    return -1;
+    if (!id || !type_out || !data_out || !len_out) return -1;
+
+    *data_out = NULL;
+    *len_out = 0;
+
+    char path[512];
+    object_path(id, path, sizeof(path));
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) return -1;
+
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return -1;
+    }
+
+    long file_size_long = ftell(fp);
+    if (file_size_long < 0) {
+        fclose(fp);
+        return -1;
+    }
+
+    size_t file_size = (size_t)file_size_long;
+
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        return -1;
+    }
+
+    unsigned char *buf = (unsigned char *)malloc(file_size);
+    if (!buf) {
+        fclose(fp);
+        return -1;
+    }
+
+    if (file_size > 0 && fread(buf, 1, file_size, fp) != file_size) {
+        free(buf);
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+
+    ObjectID actual;
+    compute_hash(buf, file_size, &actual);
+    if (memcmp(actual.hash, id->hash, HASH_SIZE) != 0) {
+        free(buf);
+        return -1;
+    }
+
+    unsigned char *nul = memchr(buf, '\0', file_size);
+    if (!nul) {
+        free(buf);
+        return -1;
+    }
+
+    size_t header_len = (size_t)(nul - buf);
+    if (header_len == 0) {
+        free(buf);
+        return -1;
+    }
+
+    size_t data_len = file_size - header_len - 1;
+
+    char header[128];
+    if (header_len >= sizeof(header)) {
+        free(buf);
+        return -1;
+    }
+
+    memcpy(header, buf, header_len);
+    header[header_len] = '\0';
+
+    char type_str[16];
+    size_t declared_size = 0;
+    char extra;
+
+    if (sscanf(header, "%15s %zu %c", type_str, &declared_size, &extra) != 2) {
+        free(buf);
+        return -1;
+    }
+
+    if (declared_size != data_len) {
+        free(buf);
+        return -1;
+    }
+
+    if (strcmp(type_str, "blob") == 0) {
+        *type_out = OBJ_BLOB;
+    } else if (strcmp(type_str, "tree") == 0) {
+        *type_out = OBJ_TREE;
+    } else if (strcmp(type_str, "commit") == 0) {
+        *type_out = OBJ_COMMIT;
+    } else {
+        free(buf);
+        return -1;
+    }
+
+    void *data_buf = malloc(data_len > 0 ? data_len : 1);
+    if (!data_buf && data_len > 0) {
+        free(buf);
+        return -1;
+    }
+
+    if (data_len > 0) {
+        memcpy(data_buf, nul + 1, data_len);
+    }
+
+    *data_out = data_buf;
+    *len_out = data_len;
+
+    free(buf);
+    return 0;
 }
