@@ -35,38 +35,52 @@ void cmd_init(void) {
 }
 
 // Usage: pes add <file>...
-int cmd_add(int argc, char *argv[]) {
+void cmd_add(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: pes add <file>...\n");
-        return 1;
+        return;
     }
 
-    Index index;
-    if (index_load(&index) != 0) {
+    Index *index = calloc(1, sizeof(Index));
+    if (!index) {
+        fprintf(stderr, "error: out of memory\n");
+        return;
+    }
+
+    if (index_load(index) != 0) {
         fprintf(stderr, "error: failed to load index\n");
-        return 1;
+        free(index);
+        return;
     }
 
     for (int i = 2; i < argc; i++) {
-        if (index_add(&index, argv[i]) != 0) {
+        if (index_add(index, argv[i]) != 0) {
             fprintf(stderr, "error: failed to add '%s'\n", argv[i]);
-            return 1;
+            free(index);
+            return;
         }
     }
 
-    return 0;
+    free(index);
 }
 
 // Usage: pes status
 void cmd_status(void) {
-    Index index;
-    if (index_load(&index) != 0) {
-        fprintf(stderr, "error: failed to load index\n");
+    Index *index = calloc(1, sizeof(Index));
+    if (!index) {
+        fprintf(stderr, "error: out of memory\n");
         return;
     }
-    index_status(&index);
-}
 
+    if (index_load(index) != 0) {
+        fprintf(stderr, "error: failed to load index\n");
+        free(index);
+        return;
+    }
+
+    index_status(index);
+    free(index);
+}
 // Usage: pes commit -m <message>
 void cmd_commit(int argc, char *argv[]) {
     if (argc < 4 || strcmp(argv[2], "-m") != 0) {
