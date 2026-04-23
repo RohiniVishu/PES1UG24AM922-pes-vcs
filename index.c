@@ -230,8 +230,11 @@ int index_save(const Index *index) {
 
     if (ensure_dir(PES_DIR) != 0) return -1;
 
-    Index sorted = *index;
-    qsort(sorted.entries, sorted.count, sizeof(IndexEntry), compare_index_entries);
+    Index *sorted = malloc(sizeof(Index));
+    if (!sorted) return -1;
+    *sorted = *index;
+
+qsort(sorted->entries, sorted->count, sizeof(IndexEntry), compare_index_entries);;
 
     char tmp_template[512];
     snprintf(tmp_template, sizeof(tmp_template), "%s/.indexXXXXXX", PES_DIR);
@@ -246,16 +249,16 @@ int index_save(const Index *index) {
         return -1;
     }
 
-    for (int i = 0; i < sorted.count; i++) {
+    for (int i = 0; i < sorted->count; i++) {
         char hash_hex[HASH_HEX_SIZE + 1];
-        hash_to_hex(&sorted.entries[i].hash, hash_hex);
+        hash_to_hex(&sorted->entries[i].hash, hash_hex);
 
         if (fprintf(fp, "%o %s %llu %u %s\n",
-                    sorted.entries[i].mode,
+                    sorted->entries[i].mode,
                     hash_hex,
                     (unsigned long long)sorted.entries[i].mtime_sec,
-                    sorted.entries[i].size,
-                    sorted.entries[i].path) < 0) {
+                    sorted->entries[i].size,
+                    sorted->entries[i].path) < 0) {
             fclose(fp);
             unlink(tmp_template);
             return -1;
@@ -290,7 +293,7 @@ int index_save(const Index *index) {
         close(dirfd);
     }
 
-    return 0;
+    return 0; free(sorted);
 }
 
 // Stage a file for the next commit.
