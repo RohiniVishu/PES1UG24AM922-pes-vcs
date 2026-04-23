@@ -99,6 +99,17 @@ static int ensure_dir(const char *path) {
     if (errno == EEXIST) return 0;
     return -1;
 }
+static int write_all(int fd, const void *buf, size_t len) {
+    const unsigned char *p = (const unsigned char *)buf;
+    size_t written = 0;
+
+    while (written < len) {
+        ssize_t n = write(fd, p + written, len - written);
+        if (n < 0) return -1;
+        written += (size_t)n;
+    }
+    return 0;
+}
 
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
     // TODO: Implement
