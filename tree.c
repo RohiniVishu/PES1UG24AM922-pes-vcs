@@ -192,3 +192,5 @@ static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
             }
         }
     }
+ void *data;
+    size_t len;
