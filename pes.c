@@ -35,7 +35,7 @@ void cmd_init(void) {
 }
 
 // Usage: pes add <file>...
-void cmd_add(int argc, char *argv[]) {
+int cmd_add(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: pes add <file>...\n");
         return;
@@ -120,6 +120,7 @@ int main(int argc, char *argv[]) {
     }
 
     const char *cmd = argv[1];
+    if (cmd_add(argc, argv) != 0) return 1;
 
     if      (strcmp(cmd, "init") == 0)     cmd_init();
     else if (strcmp(cmd, "add") == 0)      cmd_add(argc, argv);
