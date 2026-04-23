@@ -110,11 +110,116 @@ static int write_all(int fd, const void *buf, size_t len) {
     }
     return 0;
 }
-
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
-    // TODO: Implement
-    (void)type; (void)data; (void)len; (void)id_out;
-    return -1;
+    if (!id_out) return -1;
+    if (len > 0 && data == NULL) return -1;
+
+    const char *type_str = NULL;
+    switch (type) {
+        case OBJ_BLOB:   type_str = "blob";   break;
+        case OBJ_TREE:   type_str = "tree";   break;
+        case OBJ_COMMIT: type_str = "commit"; break;
+        default: return -1;
+    }
+
+    char header[64];
+    int header_chars = snprintf(header, sizeof(header), "%s %zu", type_str, len);
+    if (header_chars < 0 || header_chars >= (int)sizeof(header)) return -1;
+
+    size_t header_len = (size_t)header_chars + 1;   // include '\0'
+    size_t total_len = header_len + len;
+
+    unsigned char *full = (unsigned char *)malloc(total_len);
+    if (!full) return -1;
+
+    memcpy(full, header, header_len);
+    if (len > 0) memcpy(full + header_len, data, len);
+
+    ObjectID id;
+    compute_hash(full, total_len, &id);
+    *id_out = id;
+
+    if (object_exists(&id)) {
+        free(full);
+        return 0;
+    }
+
+    char hex[HASH_HEX_SIZE + 1];
+    hash_to_hex(&id, hex);
+
+    char shard_dir[512];
+    char final_path[512];
+    char tmp_template[512];
+
+    if (snprintf(shard_dir, sizeof(shard_dir), "%s/%.2s", OBJECTS_DIR, hex) >= (int)sizeof(shard_dir)) {
+        free(full);
+        return -1;
+    }
+    if (snprintf(final_path, sizeof(final_path), "%s/%.2s/%s", OBJECTS_DIR, hex, hex + 2) >= (int)sizeof(final_path)) {
+        free(full);
+        return -1;
+    }
+
+    if (ensure_dir(PES_DIR) != 0) {
+        free(full);
+        return -1;
+    }
+    if (ensure_dir(OBJECTS_DIR) != 0) {
+        free(full);
+        return -1;
+    }
+    if (ensure_dir(shard_dir) != 0) {
+        free(full);
+        return -1;
+    }
+
+    if (snprintf(tmp_template, sizeof(tmp_template), "%s/.tmpXXXXXX", shard_dir) >= (int)sizeof(tmp_template)) {
+        free(full);
+        return -1;
+    }
+
+    int fd = mkstemp(tmp_template);
+    if (fd < 0) {
+        free(full);
+        return -1;
+    }
+
+    fchmod(fd, 0644);
+
+    if (write_all(fd, full, total_len) != 0) {
+        close(fd);
+        unlink(tmp_template);
+        free(full);
+        return -1;
+    }
+
+    if (fsync(fd) != 0) {
+        close(fd);
+        unlink(tmp_template);
+        free(full);
+        return -1;
+    }
+
+    if (close(fd) != 0) {
+        unlink(tmp_template);
+        free(full);
+        return -1;
+    }
+
+    if (rename(tmp_template, final_path) != 0) {
+        unlink(tmp_template);
+        free(full);
+        return -1;
+    }
+
+    int dfd = open(shard_dir, O_RDONLY);
+    if (dfd >= 0) {
+        fsync(dfd);
+        close(dfd);
+    }
+
+    free(full);
+    return 0;
 }
 
 // Read an object from the store.
