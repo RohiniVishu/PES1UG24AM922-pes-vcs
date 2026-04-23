@@ -274,7 +274,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
-    unsigned char *buf = (unsigned char *)malloc(file_size);
+unsigned char *buf = (unsigned char *)malloc(file_size > 0 ? file_size : 1);
     if (!buf) {
         fclose(fp);
         return -1;
@@ -321,7 +321,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     size_t declared_size = 0;
     char extra;
 
-    if (sscanf(header, "%15s %zu %c", type_str, &declared_size, &extra) != 2) {
+    if (sscanf(header, "%15s %zu", type_str, &declared_size) != 2) {
         free(buf);
         return -1;
     }
