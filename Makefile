@@ -10,7 +10,7 @@ OBJS = $(SRCS:.c=.o)
 pes: $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-%.o: %.c pes.h
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # ─── Test binaries ───────────────────────────────────────────────────────────
