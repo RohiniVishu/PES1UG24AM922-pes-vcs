@@ -35,7 +35,7 @@ void cmd_init(void) {
 }
 
 // Usage: pes add <file>...
-int cmd_add(int argc, char *argv[]) {
+void cmd_add(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: pes add <file>...\n");
         return;
@@ -49,7 +49,7 @@ int cmd_add(int argc, char *argv[]) {
     Index idx;
 if (index_load(&idx) != 0) {
     fprintf(stderr, "index load failed\n");
-    return 1;
+    return;
 }
     for (int i = 2; i < argc; i++) {
         if (index_add(&index, argv[i]) != 0) {
