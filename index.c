@@ -256,7 +256,7 @@ qsort(sorted->entries, sorted->count, sizeof(IndexEntry), compare_index_entries)
         if (fprintf(fp, "%o %s %llu %u %s\n",
                     sorted->entries[i].mode,
                     hash_hex,
-                    (unsigned long long)sorted.entries[i].mtime_sec,
+                    (unsigned long long)sorted->entries[i].mtime_sec,
                     sorted->entries[i].size,
                     sorted->entries[i].path) < 0) {
             fclose(fp);
