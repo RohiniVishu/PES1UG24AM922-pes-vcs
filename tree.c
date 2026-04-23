@@ -130,6 +130,7 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //   - object_write    : save that binary buffer to the store as OBJ_TREE
 //
 // Returns 0 on success, -1 on error.
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
     Tree tree;
     tree.count = 0;
