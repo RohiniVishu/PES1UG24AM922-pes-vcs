@@ -313,7 +313,6 @@ int index_add(Index *index, const char *path) {
     if (!fp) return -1;
 
     size_t size = (size_t)st.st_size;
-    void *data = NULL;
 
     void *data = malloc(size == 0 ? 1 : size);
 if (!data) {
