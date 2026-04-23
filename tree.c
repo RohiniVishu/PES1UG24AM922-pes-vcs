@@ -135,9 +135,60 @@ int tree_from_index(ObjectID *id_out) {
 
     return build_tree(idx.entries, idx.count, id_out);
 }
-int tree_from_index(ObjectID *id_out) {
-    // TODO: Implement recursive tree building
-    // (See Lab Appendix for logical steps)
-    (void)id_out;
-    return -1;
-}
+static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
+    Tree tree;
+    tree.count = 0;
+
+    for (int i = 0; i < count; i++) {
+        char *path = entries[i].path;
+
+        char *slash = strchr(path, '/');
+
+        if (!slash) {
+            // FILE
+            TreeEntry *e = &tree.entries[tree.count++];
+
+            e->mode = entries[i].mode;
+            e->hash = entries[i].hash;
+            strcpy(e->name, path);
+        } else {
+            // DIRECTORY
+            char dir[256];
+            strncpy(dir, path, slash - path);
+            dir[slash - path] = '\0';
+
+            // Collect group
+            IndexEntry sub_entries[1024];
+            int sub_count = 0;
+
+            for (int j = i; j < count; j++) {
+                if (strncmp(entries[j].path, dir, strlen(dir)) == 0 &&
+                    entries[j].path[strlen(dir)] == '/') {
+
+                    strcpy(sub_entries[sub_count].path,
+                           entries[j].path + strlen(dir) + 1);
+
+                    sub_entries[sub_count].mode = entries[j].mode;
+                    sub_entries[sub_count].hash = entries[j].hash;
+
+                    sub_count++;
+                }
+            }
+
+            ObjectID sub_id;
+            if (build_tree(sub_entries, sub_count, &sub_id) != 0)
+                return -1;
+
+            TreeEntry *e = &tree.entries[tree.count++];
+            e->mode = MODE_DIR;
+            e->hash = sub_id;
+            strcpy(e->name, dir);
+
+            // skip processed
+            while (i + 1 < count &&
+                   strncmp(entries[i + 1].path, dir, strlen(dir)) == 0 &&
+                   entries[i + 1].path[strlen(dir)] == '/') {
+                i++;
+            }
+        }
+    }
