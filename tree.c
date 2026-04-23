@@ -202,3 +202,4 @@ static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
 
     return rc;
 }
+
