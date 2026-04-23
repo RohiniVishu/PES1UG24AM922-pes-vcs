@@ -199,10 +199,16 @@ static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
     return rc;
 }
 
-
 int tree_from_index(ObjectID *id_out) {
-    Index idx;
-    if (index_load(&idx) != 0) return -1;
+    Index *idx = calloc(1, sizeof(Index));
+    if (!idx) return -1;
 
-    return build_tree(idx.entries, idx.count, id_out);
+    if (index_load(idx) != 0) {
+        free(idx);
+        return -1;
+    }
+
+    int rc = build_tree(idx->entries, idx->count, id_out);
+    free(idx);
+    return rc;
 }
