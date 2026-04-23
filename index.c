@@ -154,10 +154,65 @@ static int write_all(FILE *fp, const char *buf, size_t len) {
     return fwrite(buf, 1, len, fp) == len ? 0 : -1;
 }
 int index_load(Index *index) {
-    // TODO: Implement index loading
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+    if (!index) return -1;
+    index->count = 0;
+
+    FILE *fp = fopen(INDEX_FILE, "r");
+    if (!fp) {
+        if (errno == ENOENT) {
+            return 0; // no index yet is not an error
+        }
+        return -1;
+    }
+
+    char line[1024];
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (index->count >= MAX_INDEX_ENTRIES) {
+            fclose(fp);
+            return -1;
+        }
+
+        unsigned int mode_tmp = 0;
+        unsigned long long mtime_tmp = 0;
+        unsigned int size_tmp = 0;
+        char hash_hex[HASH_HEX_SIZE + 1];
+        char path[512];
+
+        // Parse: <mode> <hash> <mtime> <size> <path>
+        int n = sscanf(line, "%o %64s %llu %u %[^\n]",
+                       &mode_tmp, hash_hex, &mtime_tmp, &size_tmp, path);
+        if (n != 5) {
+            fclose(fp);
+            return -1;
+        }
+
+        // Trim leading spaces in path if any
+        while (*path == ' ' || *path == '\t') {
+            memmove(path, path + 1, strlen(path));
+        }
+
+        IndexEntry *e = &index->entries[index->count];
+        e->mode = (uint32_t)mode_tmp;
+        e->mtime_sec = (uint64_t)mtime_tmp;
+        e->size = (uint32_t)size_tmp;
+
+        if (hex_to_hash(hash_hex, &e->hash) != 0) {
+            fclose(fp);
+            return -1;
+        }
+
+        if (strlen(path) >= sizeof(e->path)) {
+            fclose(fp);
+            return -1;
+        }
+        strcpy(e->path, path);
+
+        index->count++;
+    }
+
+    fclose(fp);
+    return 0;
 }
 
 // Save the index to .pes/index atomically.
