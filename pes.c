@@ -120,7 +120,6 @@ int main(int argc, char *argv[]) {
     }
 
     const char *cmd = argv[1];
-    if (cmd_add(argc, argv) != 0) return 1;
 
     if      (strcmp(cmd, "init") == 0)     cmd_init();
     else if (strcmp(cmd, "add") == 0)      cmd_add(argc, argv);
