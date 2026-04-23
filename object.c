@@ -94,6 +94,12 @@ int object_exists(const ObjectID *id) {
 
 //
 // Returns 0 on success, -1 on error.
+static int ensure_dir(const char *path) {
+    if (mkdir(path, 0755) == 0) return 0;
+    if (errno == EEXIST) return 0;
+    return -1;
+}
+
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
     // TODO: Implement
     (void)type; (void)data; (void)len; (void)id_out;
