@@ -10,6 +10,7 @@
 //   "100644 hello.txt\0" followed by 32 raw bytes of SHA-256
 
 #include "tree.h"
+#include "object.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -188,7 +189,7 @@ static int build_tree(IndexEntry *entries, int count, ObjectID *out_id) {
         }
     }
  void *data;
-    size_t len;
+ size_t len;
  if (tree_serialize(&tree, &data, &len) != 0)
         return -1;
 
